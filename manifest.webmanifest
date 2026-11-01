@@ -1,0 +1,20 @@
+{
+  "id": "/4MLClass/",
+  "name": "4MLClass - Machine Learning Class Companion",
+  "short_name": "4MLClass",
+  "description": "The class companion for the machine learning lectures of Prof. Periklis Gogas: the slides in order, interactive figures and short checks.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7F5F0",
+  "theme_color": "#1B2340",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "icons/screenshot-wide.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "4MLClass chapters" }
+  ],
+  "launch_handler": { "client_mode": "focus-existing" }
+}
