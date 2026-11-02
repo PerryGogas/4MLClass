@@ -12,9 +12,9 @@
   MLS.APP = {
     name: '4MLClass',
     longName: 'Machine Learning Class Companion',
-    version: '0.3.0', stateVersion: 1, buildNo: 3,
-    pill: 'v0.3 preview b3',
-    build: 'Preview build 3: online on GitHub, installable app, QR code, deep-dive links',
+    version: '0.4.0', stateVersion: 1, buildNo: 4,
+    pill: 'v0.4 preview b4',
+    build: 'Preview build 4: animated random forest vote',
     author: 'Professor Periklis Gogas',
     repo: 'PerryGogas/4MLClass',
     siteUrl: 'https://perrygogas.github.io/4MLClass/',

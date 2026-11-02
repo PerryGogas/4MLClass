@@ -656,4 +656,123 @@
     $('#enReset').onclick = () => { s = 0; upd(); };
     void r0; upd();
   };
+
+  /* ================================================================
+     11. Random forests: the vote, animated (slides 150, 151)
+     ================================================================ */
+  MLS.registerHelp({
+    fv_trees: { title: 'Number of trees', html: 'An odd number of trees, so there is never a tie between failed and healthy. Every tree was grown on its own bootstrapped sample of 90 banks.' },
+    fv_bank: { title: 'The new bank', html: 'The bank to be forecasted. <b>New bank</b> picks other values; some banks get a clear vote, others a close one.' },
+    fv_play: { title: 'Play the vote', html: '<b>Step</b> moves the bank one question further down the current tree; at the leaf the tree casts its vote. <b>Play</b> runs the whole vote. <b>End</b> shows the result at once.' }
+  });
+  FIGS.forestVote = function (host) {
+    const D = ML().DATA.banks.gen(ML().rng(2018), 90), X = D.X, y = D.y, n = X.length;
+    const tr = ML().rng(150), TREES = [];
+    for (let t = 0; t < 15; t++) { const rows = Array.from({ length: n }, () => Math.floor(tr.random() * n)); TREES.push(ML().buildTree(X, y, rows, { K: 2, maxDepth: 3, maxFeatures: 1 }, 0, tr)); }
+    const FN = ['D/E', 'T1'], FULL = ['Debt-to-equity', 'Tier 1 capital (%)'];
+    const BANK0 = [5.0, 9.75];
+    let m = 9, q = BANK0.slice(), t = 0, d = 0, votes = [], finished = false, fly = null;
+    const leafCls = node => (node.value[1] > node.value[0] ? 1 : 0);
+    const pathOf = (root, x) => { const p = [root]; let nd = root; while (nd.left) { nd = x[nd.feat] <= nd.thr ? nd.left : nd.right; p.push(nd); } return p; };
+    let paths = TREES.map(r => pathOf(r, q));
+    const $ = shell(host, 'Random forests decide democratically: by voting!',
+      '<div class="card"><div class="field-row" style="margin-top:0"><label>Number of trees' + MLS.helpBtn('fv_trees') + '</label></div>' + seg('fvM', [['5', '5'], ['9', '9'], ['15', '15']], '9') +
+        '<div class="field-row"><label>The new bank' + MLS.helpBtn('fv_bank') + '</label></div><div id="fvBank" class="note" style="margin-top:0"></div>' +
+        '<div class="btn-row" style="margin-top:6px"><button type="button" class="btn-ghost btn-small" id="fvNew">&#127922; New bank</button><button type="button" class="btn-ghost btn-small" id="fvOrig">&#8634; First bank</button></div></div>' +
+      '<div class="card"><b>Play the vote</b>' + MLS.helpBtn('fv_play') + '<div id="fvStep" style="margin-top:8px"></div></div>',
+      '<div class="stat-grid" id="fvStats"></div><div id="fvFig"></div>');
+    const COLS = W => (W < 560 ? 2 : W < 860 ? 3 : 5);
+    const F = H.diagram($('#fvFig'), {
+      title: 'Each tree votes, the majority decides', sub: 'D/E = debt-to-equity, T1 = Tier 1 capital (%). Leaves: F = failed (red), H = healthy (blue). The path of the new bank lights up.', file: 'random-forest-vote-animation',
+      height: W => { const c = COLS(W), rows = Math.ceil(m / c); return 64 + rows * 178 + 112; },
+      data: () => ({ cols: ['Tree', 'Path of the new bank', 'Vote'], rows: paths.slice(0, m).map((p, k) => [k + 1, p.slice(0, -1).map(nd => FN[nd.feat] + (q[nd.feat] <= nd.thr ? ' ≤ ' : ' > ') + f2(nd.thr)).join(', '), leafCls(p[p.length - 1]) ? 'Failed' : 'Healthy']) }),
+      draw
+    });
+    function reset() { t = 0; d = 0; votes = []; finished = false; fly = null; paths = TREES.map(r => pathOf(r, q)); }
+    function step() {
+      if (finished) return false;
+      if (t >= m) { finished = true; return false; }
+      const p = paths[t];
+      if (d < p.length - 1) { d++; return true; }
+      votes.push(leafCls(p[p.length - 1])); fly = { tree: t };
+      t++; d = 0;
+      if (t >= m) { finished = true; return false; }
+      return true;
+    }
+    function draw(P) {
+      const W = P.W, c = COLS(W), cw = (W - 16) / c, ch = 178, top = 64, red = RED(), blue = BLUE(), acc = MLS.css('--accent'), mut = P.C.axis;
+      /* the new bank */
+      H.box(P, W / 2, 26, Math.min(W - 16, 440), 42, { text: ['New bank: debt-to-equity ' + f2(q[0]) + ' · Tier 1 capital ' + f2(q[1]) + '%', 'Every tree answers: failed or healthy?'], fill: MLS.css('--surface'), stroke: P.C.ink, fs: W < 480 ? 11 : 12.5 });
+      const slots = { 1: 0, 0: 0 }, bx = W / 2, by = top + Math.ceil(m / c) * ch + 18;
+      for (let k = 0; k < m; k++) {
+        const cx = 8 + cw * (k % c) + cw / 2, y0 = top + Math.floor(k / c) * ch, root = TREES[k], path = paths[k];
+        const state = k < t ? 'done' : k === t && !finished ? 'now' : 'wait';
+        const g = P.node('g', { opacity: state === 'wait' ? 0.38 : 1 }, P.overlay);
+        P.node('rect', { x: cx - cw / 2 + 4, y: y0 + 2, width: cw - 8, height: ch - 10, rx: 10, fill: state === 'now' ? MLS.rgba(acc, 0.07) : 'none', stroke: state === 'now' ? acc : P.C.grid, 'stroke-width': state === 'now' ? 2 : 1 }, g);
+        const tt = P.node('text', { x: cx, y: y0 + 18, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 800, fill: P.C.text }, g); tt.textContent = 'Tree ' + (k + 1);
+        /* layout: leaves evenly spaced */
+        let leaf = 0; const pos = new Map(), lv = 4, span = cw - 22;
+        (function walk(nd, dep) { if (!nd.left) { pos.set(nd, { x: 0, dep }); pos.get(nd).slot = leaf++; return; } walk(nd.left, dep + 1); walk(nd.right, dep + 1); pos.set(nd, { slot: (pos.get(nd.left).slot + pos.get(nd.right).slot) / 2, dep }); })(root, 0);
+        const X0 = cx - span / 2, sx = sl => X0 + span * (sl + 0.5) / Math.max(1, leaf), sy = dep => y0 + 38 + dep * ((ch - 74) / (lv - 1));
+        const onPath = nd => { const i = path.indexOf(nd); return i >= 0 && (state === 'done' || (state === 'now' && i <= d)); };
+        (function edges(nd) { if (!nd.left) return; [nd.left, nd.right].forEach(ch2 => { const lit = onPath(nd) && onPath(ch2); P.node('line', { x1: sx(pos.get(nd).slot), y1: sy(pos.get(nd).dep), x2: sx(pos.get(ch2).slot), y2: sy(pos.get(ch2).dep), stroke: lit ? acc : mut, 'stroke-width': lit ? 3 : 1 }, g); edges(ch2); }); })(root);
+        (function nodes(nd) {
+          const x = sx(pos.get(nd).slot), yy = sy(pos.get(nd).dep), lit = onPath(nd);
+          if (nd.left) {
+            const w = Math.max(38, Math.min(cw / 2.1, 66, 2 * span / Math.max(1, leaf) - 4)), txt = FN[nd.feat] + ' ≤ ' + MLS.fmt(nd.thr, 1);
+            P.node('rect', { x: x - w / 2, y: yy - 9, width: w, height: 18, rx: 5, fill: lit ? acc : P.C.surface, stroke: lit ? acc : mut }, g);
+            const e = P.node('text', { x, y: yy + 3.5, 'text-anchor': 'middle', 'font-size': w < 50 ? 8.5 : 9.5, 'font-weight': 700, fill: lit ? MLS.css('--on-accent') : P.C.text }, g); e.textContent = txt;
+            nodes(nd.left); nodes(nd.right);
+          } else {
+            const cl = leafCls(nd);
+            P.node('circle', { cx: x, cy: yy, r: lit ? 9.5 : 7, fill: cl ? red : blue, stroke: lit ? P.C.ink : 'none', 'stroke-width': 2.5, opacity: lit ? 1 : 0.55 }, g);
+            const e = P.node('text', { x, y: yy + 3.5, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: '#fff' }, g); e.textContent = cl ? 'F' : 'H';
+          }
+        })(root);
+        if (state === 'done') { const v = votes[k]; H.label(P, cx, y0 + ch - 12, 'votes ' + (v ? 'FAILED' : 'HEALTHY'), { size: 11, color: v ? red : blue }); }
+        if (state === 'now' && d > 0) { const nd = path[d - 1]; H.label(P, cx, y0 + ch - 12, FN[nd.feat] + ' = ' + f2(q[nd.feat]) + (q[nd.feat] <= nd.thr ? ' ≤ ' : ' > ') + MLS.fmt(nd.thr, 1) + ' → ' + (q[nd.feat] <= nd.thr ? 'yes' : 'no'), { size: 11, color: acc }); }
+      }
+      /* the ballot box */
+      const need = Math.floor(m / 2) + 1, bw = Math.min(W - 40, 560), cell = Math.min(26, (bw - 120) / m), lx = bx - bw / 2;
+      [[1, 'Failed', red], [0, 'Healthy', blue]].forEach(([cl, nm, colr], r) => {
+        const yy = by + 18 + r * 36, cnt = votes.filter(v => v === cl).length, win = finished && cnt >= need;
+        const e = P.node('text', { x: lx, y: yy + 5, 'font-size': 13.5, 'font-weight': 800, fill: colr }, P.overlay); e.textContent = nm + ': ' + cnt;
+        P.node('rect', { x: lx + 96, y: yy - 13, width: cell * m + 6, height: 26, rx: 6, fill: 'none', stroke: win ? colr : P.C.grid, 'stroke-width': win ? 3 : 1 }, P.overlay);
+        for (let i = 0; i < cnt; i++) P.node('rect', { x: lx + 99 + i * cell, y: yy - 10, width: cell - 3, height: 20, rx: 4, fill: colr }, P.overlay);
+        slots[cl] = { x: lx + 99 + cnt * cell, y: yy - 10, w: cell - 3 };
+      });
+      const mx = lx + 99 + need * cell - 1.5;
+      P.node('line', { x1: mx, y1: by + 2, x2: mx, y2: by + 72, stroke: P.C.ink, 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }, P.overlay);
+      H.label(P, mx, by - 2, 'majority: ' + need + ' of ' + m, { size: 11 });
+      if (finished) {
+        const f = votes.filter(v => v).length, h = m - f, win = f > h;
+        H.label(P, W / 2, by + 96, 'Final decision: ' + (win ? 'FAILED' : 'HEALTHY') + ' (' + Math.max(f, h) + ' votes to ' + Math.min(f, h) + ')', { size: 15, color: win ? red : blue });
+      }
+      /* a ballot flying from the leaf of the tree that just voted into the box */
+      if (fly) {
+        const k = fly.tree, cx = 8 + cw * (k % c) + cw / 2, y0 = top + Math.floor(k / c) * ch, v = votes[k], dst = slots[v];
+        const tx = dst.x - cell, ty = dst.y;
+        const b = P.node('rect', { x: cx - 10, y: y0 + ch - 34, width: Math.max(12, dst.w), height: 20, rx: 4, fill: v ? red : blue, stroke: P.C.ink, 'stroke-width': 1.5 }, P.overlay);
+        b.style.transition = 'transform .55s cubic-bezier(.3,.7,.3,1), opacity .55s';
+        requestAnimationFrame(() => requestAnimationFrame(() => { b.style.transform = 'translate(' + (tx - (cx - 10)) + 'px,' + (ty - (y0 + ch - 34)) + 'px)'; b.style.opacity = '0.0'; }));
+        fly = null;
+      }
+    }
+    function upd() {
+      const f = votes.filter(v => v).length, h = votes.length - f;
+      $('#fvBank').innerHTML = FULL[0] + ': <b>' + f2(q[0]) + '</b><br>' + FULL[1] + ': <b>' + f2(q[1]) + '</b>';
+      $('#fvStats').innerHTML = MLS.statCard('Trees that voted', votes.length + ' of ' + m) + MLS.statCard('Votes', f + ' / ' + h, 'failed / healthy') +
+        MLS.statCard('Forest decision', finished ? (f > h ? 'Failed' : 'Healthy') : '…', finished ? 'the majority' : 'still voting', finished ? (f > h ? 'bad' : 'good') : '');
+      const cur = paths[t];
+      F.caption(finished ? '<b>Final decision – prediction → the majority.</b> Each of the ' + m + ' trees voted once.' :
+        t === 0 && d === 0 && !votes.length ? 'Press <b>Play</b> (or <b>Step</b>): the new bank goes through each tree and every tree records its decision.' :
+        'Tree ' + (t + 1) + ': ' + (d === 0 ? 'starts at the root question.' : 'the bank moves down to ' + (d === cur.length - 1 ? 'a leaf: the tree votes.' : 'the next question.')));
+      F.plot.redraw(); F.refreshTable();
+    }
+    const stp = MLS.stepper($('#fvStep'), { step, reset, after: upd, runMax: 200, speed: 3 });
+    bindSeg($, 'fvM', v => { stp.stop(); m = Number(v); reset(); upd(); });
+    $('#fvNew').onclick = () => { stp.stop(); const r = MLS.rng(MLS.newSeed()); q = [Number(r.uniform(2.2, 8.2).toFixed(2)), Number(r.uniform(6.5, 16).toFixed(2))]; reset(); upd(); };
+    $('#fvOrig').onclick = () => { stp.stop(); q = BANK0.slice(); reset(); upd(); };
+    reset(); upd();
+  };
 })();

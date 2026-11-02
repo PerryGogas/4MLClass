@@ -433,12 +433,13 @@
         <ol start="3"><li>From the initial <b>j</b> variables we <b>randomly</b> choose <b>k</b> <span class="arrow">→</span> usually <span class="tex">k = \\sqrt{j}</span>, e.g. from 9 we choose 3.</li>
         <li>We create a <b>decision tree</b> as we saw before with:<ul><li>the <b>bootstrapped</b> sample data from step 2,</li><li>the <b>k</b> variables from step 3.</li></ul></li>
         <li>We return to step 1 and create another 10, 50, 100, 1000 trees.</li></ol>` },
-      { t: 'Random forests decide democratically: by voting!', s: '150-151', h: `
+      { t: 'Random forests decide democratically: by voting!', s: '150-151', fig: 'forestVote', h: `
         <ul><li>Each of the trees we created <b>votes</b>.</li><li>Final decision, prediction <span class="arrow">→</span> the <b>majority</b>.</li></ul>
         <p>For any new data to be forecasted, we run through <b>each tree</b> and record the decision:</p>
         <ul><li>"increase in stock price" or "decrease in stock price"</li><li>"power theft" or "no power theft" for the customer</li><li>"re-admission" or "no re-admission"</li><li>"legitimate" or "fraudulent" credit card transaction</li></ul>
         <p>They also work with <b>continuous variables</b>: forecasting the price of a stock or index, bond returns, natural gas price, etc. (the trees' forecasts are averaged).</p>
-        <div class="key">This technique that uses <b>B</b>ootstrapping + <b>Agg</b>regat<b>ing</b> is called <b>BAGGING</b>.</div>` },
+        <div class="key">This technique that uses <b>B</b>ootstrapping + <b>Agg</b>regat<b>ing</b> is called <b>BAGGING</b>.</div>
+        <div data-fig="forestVote"></div>` },
       { t: 'Real example: electricity demand', s: '152', h: `
         <p>A real example of an hourly <b>kWh electricity demand</b> forecast over one week (168 hours). The random forest forecast closely follows the actual demand, with its daily peaks and valleys.</p>` }
     ],
